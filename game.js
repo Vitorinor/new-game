@@ -27,6 +27,41 @@ const floor = {
   color: 'green'
 };
 
+// Obstacle array and spawn function
+let obstacles = [];
+
+function spawnObstacle() {
+  const obstacle = {
+    x: canvas.width, // Start just outside the canvas
+    y: floor.y - 50, // On the floor
+    width: 50,
+    height: 50,
+    color: 'red',
+    speed: 7 // Move left at a constant speed
+  };
+  obstacles.push(obstacle);
+}
+
+// Update and draw obstacles
+function updateObstacles() {
+  for (let i = 0; i < obstacles.length; i++) {
+    const obstacle = obstacles[i];
+
+    // Move the obstacle to the left
+    obstacle.x -= obstacle.speed;
+
+    // Draw the obstacle
+    ctx.fillStyle = obstacle.color;
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+    // Remove the obstacle if it moves off-screen
+    if (obstacle.x + obstacle.width < 0) {
+      obstacles.splice(i, 1); // Remove obstacle from array
+      i--; // Adjust loop counter after removal
+    }
+  }
+}
+
 // Game loop
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -50,14 +85,18 @@ function gameLoop() {
 
   player.y += player.velocityY;
 
-  // Move right
+  // Move player right
   player.x += player.speed;
 
-  // Loop the player horizontally
+  // Loop player horizontally
   if (player.x > canvas.width) {
     player.x = 0 - player.width;
   }
 
+  // Update obstacles
+  updateObstacles();
+
+  // Loop the game
   requestAnimationFrame(gameLoop);
 }
 
@@ -69,7 +108,10 @@ function jump() {
   }
 }
 
-// Key event listeners
+// Spawn obstacles every 2 seconds
+setInterval(spawnObstacle, 2000);
+
+// Key event listeners for jumping
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     jump();
