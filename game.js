@@ -1,122 +1,145 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Player object
-const player = {
-  x: 50,
-  y: canvas.height - 100,
+let player = {
+  x: canvas.width / 2 - 25,
+  y: canvas.height - 60,
   width: 50,
   height: 50,
   color: 'white',
   speed: 5,
-  gravity: 0.8,
-  jumpStrength: -15,
-  velocityY: 0,
-  jumping: false
 };
 
-// Floor object
-const floor = {
-  x: 0,
-  y: canvas.height - 50,
-  width: canvas.width,
-  height: 50,
-  color: 'green'
-};
+let fallingObjects = [];
+let score = 0;
+let highScore = 0;
+let gameOver = false;
 
-// Obstacle array and spawn function
-let obstacles = [];
+// Initialize score display
+const scoreDisplay = document.getElementById('score');
+const highScoreDisplay = document.getElementById('highScore');
 
-function spawnObstacle() {
-  const obstacle = {
-    x: canvas.width, // Start just outside the canvas
-    y: floor.y - 50, // On the floor
-    width: 50,
-    height: 50,
+// Falling object generator
+function spawnFallingObject() {
+  const size = Math.random() * 30 + 20;
+  const obj = {
+    x: Math.random() * (canvas.width - size),
+    y: -size,
+    width: size,
+    height: size,
     color: 'red',
-    speed: 7 // Move left at a constant speed
+    speed: Math.random() * 3 + 2,
   };
-  obstacles.push(obstacle);
+  fallingObjects.push(obj);
 }
 
-// Update and draw obstacles
-function updateObstacles() {
-  for (let i = 0; i < obstacles.length; i++) {
-    const obstacle = obstacles[i];
+// Update falling objects
+function updateFallingObjects() {
+  for (let i = 0; i < fallingObjects.length; i++) {
+    const obj = fallingObjects[i];
+    obj.y += obj.speed;
 
-    // Move the obstacle to the left
-    obstacle.x -= obstacle.speed;
+    // Collision detection with player
+    if (
+      player.x < obj.x + obj.width &&
+      player.x + player.width > obj.x &&
+      player.y < obj.y + obj.height &&
+      player.height + player.y > obj.y
+    ) {
+      gameOver = true;
+    }
 
-    // Draw the obstacle
-    ctx.fillStyle = obstacle.color;
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-
-    // Remove the obstacle if it moves off-screen
-    if (obstacle.x + obstacle.width < 0) {
-      obstacles.splice(i, 1); // Remove obstacle from array
-      i--; // Adjust loop counter after removal
+    // Remove object if it goes off-screen
+    if (obj.y > canvas.height) {
+      fallingObjects.splice(i, 1);
+      i--;
     }
   }
 }
 
-// Game loop
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw player
+// Draw player
+function drawPlayer() {
   ctx.fillStyle = player.color;
   ctx.fillRect(player.x, player.y, player.width, player.height);
-
-  // Draw floor
-  ctx.fillStyle = floor.color;
-  ctx.fillRect(floor.x, floor.y, floor.width, floor.height);
-
-  // Gravity and jumping mechanics
-  if (player.y + player.height < floor.y) {
-    player.velocityY += player.gravity;
-    player.jumping = true;
-  } else {
-    player.velocityY = 0;
-    player.jumping = false;
-  }
-
-  player.y += player.velocityY;
-
-  // Move player right
-  player.x += player.speed;
-
-  // Loop player horizontally
-  if (player.x > canvas.width) {
-    player.x = 0 - player.width;
-  }
-
-  // Update obstacles
-  updateObstacles();
-
-  // Loop the game
-  requestAnimationFrame(gameLoop);
 }
 
-// Jump function
-function jump() {
-  if (!player.jumping) {
-    player.velocityY = player.jumpStrength;
-    player.jumping = true;
+// Draw falling objects
+function drawFallingObjects() {
+  for (const obj of fallingObjects) {
+    ctx.fillStyle = obj.color;
+    ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
   }
 }
 
-// Spawn obstacles every 2 seconds
-setInterval(spawnObstacle, 2000);
+// Control player movement
+function movePlayer() {
+  if (keys.ArrowLeft && player.x > 0) {
+    player.x -= player.speed;
+  }
+  if (keys.ArrowRight && player.x + player.width < canvas.width) {
+    player.x += player.speed;
+  }
+}
 
-// Key event listeners for jumping
+// Handle keyboard input
+let keys = {};
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') {
-    jump();
-  }
+  keys[e.key] = true;
 });
+
+window.addEventListener('keyup', (e) => {
+  keys[e.key] = false;
+});
+
+// Reset the game
+function resetGame() {
+  fallingObjects = [];
+  score = 0;
+  gameOver = false;
+  player.x = canvas.width / 2 - player.width / 2;
+}
+
+// Game loop
+function gameLoop() {
+  if (!gameOver) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Update game elements
+    movePlayer();
+    updateFallingObjects();
+
+    // Draw game elements
+    drawPlayer();
+    drawFallingObjects();
+
+    // Update score and difficulty
+    score++;
+    scoreDisplay.textContent = score;
+    if (score > highScore) {
+      highScore = score;
+      highScoreDisplay.textContent = highScore;
+    }
+
+    // Spawn new falling objects over time
+    if (Math.random() < 0.03) {
+      spawnFallingObject();
+    }
+
+    requestAnimationFrame(gameLoop);
+  } else {
+    // Show Game Over message and reset after a delay
+    ctx.fillStyle = 'white';
+    ctx.font = '48px Arial';
+    ctx.fillText('GAME OVER', canvas.width / 2 - 150, canvas.height / 2);
+
+    setTimeout(() => {
+      resetGame();
+      requestAnimationFrame(gameLoop);
+    }, 2000);
+  }
+}
 
 // Start the game
 gameLoop();
